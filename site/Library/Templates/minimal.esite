@@ -1,0 +1,7 @@
+<?esite
+/* Code to be inserted prior to processing content goes here */
+?>
+[ESITE PARSE DOCUMENT CONTENT]
+<?esite
+/* Code to be inserted after processing content goes here */
+?>

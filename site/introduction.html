@@ -1,0 +1,28 @@
+[ESITE TITLE An introduction to eSite]
+[ESITE BEGIN]
+<p>eSite is a parser for documents written using the PHP syntax. It is designed so that the content of the document can be separated from the layout in manners that all dynamic content management systems support, but that I have not found in an open-source site editing tool that is designed to support static content.</p>
+<p>eSite works by pushing a document through a two-step parsing process. The first step runs some simple transformations on the document to be parsed that are designed to preserve PHP markup in the document<a id="fn1ref" href="#fn1" class="footnote-reference">1</a>, and to glue the document to a template, if required. The second step parses the document as if it were a PHP document, capturing the output and saving it to disk.</p>
+<h2>A simple example</h2>
+<p>Below are a minimal document and template, demonstrating how the parser works:</p>
+<code>
+[--ESITE TITLE Hello World]<br />
+[--ESITE BEGIN]<br />
+&lt;h1&gt;Hello World!&lt;/h1&gt;<br />
+[--ESITE END]
+</code>
+<p>And the code for a minimal template:</p>
+<code>
+&lt;html&gt;<br />
+&lt;head&gt;<br />
+[--ESITE PARSE TITLE]<br />
+&lt;/head&gt;<br />
+&lt;body&gt;<br />
+[--ESITE PARSE CONTENT]<br />
+&lt;/body&gt;<br />
+&lt;/html&gt;
+</code>
+<p>As you can see, the template would be a PHP file, except for the replacement of <cite>&lt;?php</cite> with <cite>&lt?esite</cite>. Since eSite is written in PHP, eSite documents and templates use the PHP syntax with all PHP built-in functions plus any functions you may have added to PHP using the <a href="http://pear.php.net">PEAR</a> system.</p>
+<p>The <cite>[--ESITE BEGIN]</cite> and <cite>[--ESITE END]</cite> blocks in the document are simply conveniences that are transformed into standardized chunks of PHP code during the first phase of the parsing process.</p>
+<hr />
+<p class="footnote"><a id="fn1" href="#fn1ref">1</a> This step is concerned with the preservation of PHP markup if only because the parser is written in PHP, and for no other reason than that if the parser did not do this, PHP documents would not be usable after handled by this tool.</p>
+[ESITE END]

@@ -1,0 +1,18 @@
+[ESITE TITLE Functions and Variables]
+[ESITE BEGIN]
+<p>eSite defines some functions and variables that may be used by website developers. No function or variable named <code>esite_*</code> is guarantied to not be already used by the eSite parser. Functions and variables named <code>esite_internal_*</code> are reserved for eSite internal use and, in the case of functions, are not guarantied to maintain the same behavior between eSite versions, and, in the case of variables, not to be modified by eSite functions in unexpected manners.</p>
+<h2>Functions</h2>
+<dl>
+<dt>esite_debug(&#36;flag = "print_debugging_statement")</dt><dd>Returns <cite>TRUE</cite> if one of the eSite initialization scripts set the desired flag (which defaults to <cite>print_debugging_statement</cite>). In all other cases, it returns <cite>FALSE</cite></dd>
+<dt>esite_exec(&#36;program, &#36;parameters, &#36;path = '')</dt><dd>Execute the program <cite>&#36;program</cite> with the given parameters <cite>&#36;parameters</cite>. If <cite>&#36;path</cite> is set, <cite>&#36;program</cite> must exist in <cite>&#36;path</cite>, otherwise, it must exist in the system &#36;PATH.</dd>
+<dt>esite_parse_content(&#36;esite_content)</dt><dd>Parse the contents of a variable as if the variable contained a set of valid PHP code.</dd>
+</dl>
+<h2>Variables</h2>
+<dl>
+<dt>&#36;esite_content</dt><dd>The content of a document, provided [--ESITE BEGIN] and [--ESITE END] bracketed statements exist in the document.</dd>
+<dt>&#36;esite_ini</dt><dd>Array of configuration values set when eSite parser is initialized.</dd>
+<dt>&#36;esite_root</dt><dd>The root directory of the website. This needs to be set to some value such that it can be used to navigate through the website. The default value is <code>.</code> This value is best set to either a relative directory or to a valid absolute URL.</dd>
+<dt>&#36;esite_title</dt><dd>The title of a document. This value can be set either with the [--ESITE TITLE some document title] bracketed statement or in code.</dd>
+<dt>&#36;esite_write_file_to_name</dt><dd>The name of the file to be written to the website. By default this is the same as the name of the file being parsed. This value can be set either with [--ESITE CHANGE NAME TO filename.extension] bracketed statement or in code. This value may be set at any point within the file being parsed.</dd>
+</dl>
+[ESITE END]

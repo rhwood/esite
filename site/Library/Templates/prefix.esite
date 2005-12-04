@@ -1,0 +1,24 @@
+<?esite
+
+$link = array(
+	"Fink" => array(
+		"url"	=> 'http://fink.sourceforge.net',
+		"title"	=> 'Fink'),
+	"Gnome" => array(
+		"url"	=> 'http://www.gnome.org',
+		"title"	=> 'GNOME Desktop'),
+	"MacGPG" => array(
+		"url"	=> 'http://macgpg.sourceforge.net',
+		"title"	=> 'Mac GNU Privacy Guard'),
+	"MacOSX" => array(
+		"url"	=> 'http://www.apple.com/macosx',
+		"title"	=> 'Mac OS X'),
+	"Journal" => array(
+		"url"	=> 'http://shyramblings.blogspot.com',
+		"title"	=> 'Shy Ramblings'),
+	"DP" => array(
+		"url"	=> 'http://darwinports.opendarwin.org',
+		"title"	=> 'DarwinPorts')
+);
+
+?>

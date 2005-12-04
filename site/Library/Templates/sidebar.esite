@@ -1,0 +1,22 @@
+<div id="sidebar">
+<div class="section">
+<div class="section-header">&nbsp;</div>
+<p class="section">eSite Project</p>
+<ul>
+	<li><a href="<?esite echo($esite_root); ?>index.html">Home</a></li>
+	<li><a href="<?esite echo($esite_root); ?>status.html">Status</a></li>
+	<li><a href="<?esite echo($esite_root); ?>documents.html">Documents</a></li>
+	<li><a href="<?esite echo($esite_root); ?>products.html">Products</a></li>
+</ul>
+<div class="section-footer">&nbsp;</div>
+</div>
+<div class="section">
+<div class="section-header">&nbsp;</div>
+<p class="section">@ SourceForge</p>
+<ul>
+	<li><a href="http://www.sourceforge.net/projects/esite/">eSite Project</a></li>
+	<li><a href="http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/esite/">Browse CVS</a></li>
+</ul>
+<div class="section-footer">&nbsp;</div>
+</div>
+</div>

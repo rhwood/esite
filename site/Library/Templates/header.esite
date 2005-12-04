@@ -1,0 +1,28 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<?esite if ($noRobots) : ?>
+<meta name="ROBOTS" content="NOINDEX, NOFOLLOW" />
+<?esite endif ?>
+<?esite echo($headerAdditions); ?> 
+<meta name="description" content="<?esite echo($desciption); ?>" />
+<meta name="keywords" content="<?esite echo($keywords); ?>" />
+<!--
+<meta http-equiv="pics-label" content='(pics-1.1 "http://www.icra.org/ratingsv02.html" l gen true for "http://homepage.mac.com/rhwood" r (nz 1 vz 1 lz 1 oz 1 cz 1))' />
+-->
+<meta name="copyright" content="<?esite echo ($copyright); ?>" />
+<meta name="author" content="Randall Wood" />
+<!--
+<link rel="meta" href="<?esite echo($esite_root); ?>Library/labels.rdf" type="application/rdf+xml" title="ICRA labels" />
+-->
+<link rel="stylesheet" href="<?esite echo($esite_root); ?>style/site.css" type="text/css" />
+<!--
+<?esite if ($isHomePage) : ?>
+<link rel="stylesheet" href="<?esite echo($esite_root); ?>Library/Styles/home.css" type="text/css" />
+<?esite endif ?>
+-->
+<meta name="generator" content="eSite (http://esite.sourceforge.net)" />
+<title><?esite if (!$isHomePage) echo "eSite::"; echo $esite_title; ?></title>
+</head>

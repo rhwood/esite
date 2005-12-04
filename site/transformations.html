@@ -1,0 +1,28 @@
+[ESITE TITLE Code Transformations While Parsing]
+[ESITE BEGIN]
+<p>When parsing documents and templates, eSite performs 3 possible kinds of code transformations on the documents before parsing any instructions in the documents.</p>
+<h2>Wrapping the document</h2>
+<p>If an eSite document does not begin with <code>&lt;?esite</code> and end with <code>?&gt;</code> statements, these statements are added to the document., along with a statement tying the document to the default template using a PHP <code>require</code> statement. If the document author wishes to use a template other than the default for a particular document, he may write the complete code to use the template himself.</p>
+<h2>Bracketed Statements</h2>
+<p>eSite provides a set of statements in the form <code>[--ESITE SOME STATEMENT]</code> that are transformed into PHP code inside <code>&lt;?esite ?&gt;</code> tags during the second transformation. The purpose of these statements is to cover code that is required for parsing, but which does not contribute to any logic of the template or document. The allowed bracketed statements are outlined below:</p>
+<dl>
+<dt>[--ESITE BEGIN]</dt><dd>eSite has a concept of "document content" which is embedded within a template during parsing. This statement marks the beginning of the document content. "Document content" may include eSite code, but does not need to. The concept allows a template to be designed that drops the content of the document into a single location within the template. This statement is replaced with the following code on a line by itself:<br /><code>&#36;esite_content = &lt;&lt;&lt;END_OF_CONTENT</code></dd>
+<dt>[--ESITE END]</dt><dd>This statement marks the end of the document content started with <code>[--ESITE BEGIN]</code> discussed above. It is replaced with the following code on a line by itself:<br /><code>END_OF_CONTENT;</code></dd>
+<dt>[--ESITE PARSE CONTENT]</dt><dd>This statement is replaced with code to include the content of the document enclosed between <code>[--ESITE BEGIN]</code> and <code>[--ESITE END]</code> bracketed statements; it is only meaningful in a template. It is replaced with the following code:<br />
+<code>&lt;?esite esite_parse_content(&#36;esite_content); ?&gt;</code></dd>
+<dt>[--ESITE PARSE TITLE]</dt><dd>This statement is replaced with code to include the document title. It is replaced with the following code:<br />
+<code>&lt;?esite echo(&#36;esite_title); ?&gt;</code></dd>
+<dt>[--ESITE ROOT]</dt><dd>This statement is replaced with code to include the site root. It is replaced with the following code:<br />
+<code>&lt;?esite echo(&#36;esite_root); ?&gt;</code></dd>
+<dt>[--ESITE ROOT URL]</dt><dd>This statement sets the site root to the specified absolute or relative URL. Without this statement, the site root is set to <code>.</code> The code equivalent is: <code>&#36;esite_root = "URL";</code></dd>
+<dt>[--ESITE TITLE]</dt><dd>This statement is replaced with code to include the document title. It is replaced with the following code:<br />
+<code>&lt;?esite echo(&#36;esite_title); ?&gt;</code></dd>
+<dt>[--ESITE TITLE some document title]</dt><dd>This statement sets the document title to "some document title" where "some document title" is any value not containing a "]" character. The title is trimmed of excess white-space. The code equivalent is: <code>&#36;esite_title = "some document title";</code></dd>
+<dt>[--ESITE VARIABLE=VALUE]</dt><dd>Include a variable using the eSite block statement syntax. This is a convenience for simple documents, where no PHP syntax is required. Such a statement is replaced with <code>&#36;VARIABLE = VALUE;</code> where variable and value are arbitrary values. <code>VARIABLE</code> must contain only alphanumeric characters and meet PHP rules for variable names. If <code>VALUE</code> is anything other than a number, it is wrapped in quotes.</dd>
+<dt>[--ESITE VARIABLE]</dt><dd>Insert the contents of VARIABLE into the document. VARIABLE may be any valid scalar variable. This statement is replaced with <code>&lt;?esite echo(&#36;VARIABLE); ?&gt;</code></dd>
+<dt>[--ESITE CHANGE NAME TO filename.extension]</dt><dd>This statement causes eSite to write the file to the file named filename.extension instead of to the original filename. All directory hierarchies are preserved. The code equivalent is <code>&#36;esite_write_file_to_name = "filename.extension";</code></dd>
+<dt>[&minus;&minus;ESITE SOME STATEMENT]</dt><dd>eSite strips out the double -- signs following the bracket, allowing the bracket statement to be carried forward into the completed document. So far it only seems useful when writing documentation for eSite.</dd>
+</dl>
+<h2>tags</h2>
+<p>Code to be parsed by eSite is, once the above transformations have been completed, enclosed in <code>&lt;?esite ?&gt;</code> tags. PHP calmly ignores all code not in <code>&lt;?php ?&gt;</code> tags, so the following transformations are done: <code>&lt;?php</code> is changed to <code>&lt;?esite-php</code> and <code>&lt;?esite</code> is changed to <code>&lt;?php</code>. Once the parsing is completed, this step is undone, leaving a valid PHP document, if the original documents or templates contained any code wrapped in <code>&lt;?php ?&gt;</code> tags.</p>
+[ESITE END]

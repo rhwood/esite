@@ -1,0 +1,17 @@
+<?esite
+include('prefix.esite');
+echo '<?xml version="1.0" encoding="UTF-8"?>';
+echo "\n";
+include('header.esite');
+?>
+<body>
+<?esite include('letterhead.esite') ?>
+<div id="body">
+<div id="content">
+[ESITE PARSE CONTENT]
+</div>
+<?esite include('sidebar.esite') ?>
+</div>
+<?esite include('footer.esite') ?>
+</body>
+</html>

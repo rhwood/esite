@@ -1,0 +1,38 @@
+$esite_title = 'Project Status';
+[ESITE BEGIN]
+<p>Since eSite is new project<a class="footnote-reference" href="#fn1" id="fn1ref">1</a>, there is not that much to say at this point. I'll soon have the parser and some documents and a minimal eSite sample site posted in CVS to play around with.</p>
+<h2>Parser</h2>
+<p>The eSite parser, esite, currently has the following capabilities and limitations:</p>
+<dl>
+<dt>Capabilities</dt>
+<dd>
+<ul>
+<li>Traverses directories 1 deep, parsing and copying files from those directories.</li>
+<li>Code inside a <code>&lt;?php ?&gt;</code> block is preserved, so that PHP documents can be developed.</li>
+</ul>
+</dd>
+<dt>Limitations</dt>
+<dd>
+<ul>
+<li>No code library to assist users in developing scalable templates.</li>
+<li>Even minimal templates are excessively complex.</li>
+<li>The esite tool can only be used to build a website on a local file system.</li>
+</ul>
+</dd>
+<dt>Limitations With PHP 4.x</dt>
+<dd>
+<ul>
+<li>Nested directories must contain at least 1 file to be copied or parsed or further nested directories containing such items will not work correctly.</li>
+</ul>
+</dd>
+<dt>Known Bugs</dt>
+<dd>
+<ul>
+<li>All files not in the exclude or parse list are copied from the source directory to the build directory irregardless of the contents of the copy files list.</li>
+<li>Backups of copied files are copied.</li>
+</ul>
+</dd>
+</dl>
+<hr />
+<p class="footnote"><a href="#fn1ref" id="fn1">1:</a> The reality is not that eSite is a new project, but it is a rethinking and recycling of a project that was abandoned a couple of years ago.</p>
+[ESITE END]

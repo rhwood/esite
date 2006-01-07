@@ -1,11 +1,20 @@
 [ESITE TITLE Functions and Variables]
 [ESITE BEGIN]
 <p>eSite defines some functions and variables that may be used by website developers. No function or variable named <code>esite_*</code> is guarantied to not be already used by the eSite parser. Functions and variables named <code>esite_internal_*</code> are reserved for eSite internal use and, in the case of functions, are not guarantied to maintain the same behavior between eSite versions, and, in the case of variables, not to be modified by eSite functions in unexpected manners.</p>
+<h2>Classes</h2>
+<dl>
+<dt><a id="class-esite-parser">eSite_Parser</a></dt><dd>The class definition for the eSite website parser.</dd>
+</dl>
 <h2>Functions</h2>
 <dl>
 <dt>esite_debug(&#36;flag = "print_debugging_statement")</dt><dd>Returns <cite>TRUE</cite> if one of the eSite initialization scripts set the desired flag (which defaults to <cite>print_debugging_statement</cite>). In all other cases, it returns <cite>FALSE</cite></dd>
 <dt>esite_exec(&#36;program, &#36;parameters, &#36;path = '')</dt><dd>Execute the program <cite>&#36;program</cite> with the given parameters <cite>&#36;parameters</cite>. If <cite>&#36;path</cite> is set, <cite>&#36;program</cite> must exist in <cite>&#36;path</cite>, otherwise, it must exist in the system &#36;PATH.</dd>
 <dt>esite_parse_content(&#36;esite_content)</dt><dd>Parse the contents of a variable as if the variable contained a set of valid PHP code.</dd>
+<dt>esite_setting(&#36;section, &#36;setting)</dt><dd>Return the value of the setting <cite>&#36;setting</cite> in section <cite>&#36;section</cite>. These values are all set in <cite>esite.ini</cite> initialization file.</dd>
+</dl>
+<h2>Objects</h2>
+<dl>
+<dt>&esite_parser</dt><dd>The eSite parser object. This object does the work of parsing the templates and sources of the website. It is an instance of <a href="#class-esite-parser">eSite_Parser</a>.</dd>
 </dl>
 <h2>Variables</h2>
 <dl>

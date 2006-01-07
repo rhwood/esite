@@ -19,28 +19,10 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-/*
-code to import to allow $content to be processed w/o writing to file:
-function eval_mixed_helper($arr){ 
-	return ("echo stripslashes(\"".addslashes($arr[1])."\");");
-}
-
-function eval_mixed($string){
-	$string = "<? ?>".$string."<? ?>";
-	$string = preg_replace("/<\?=\s+(.*?)\s+\?>/", "<? echo $1; ?>", $string);
-	$string = str_replace('?>', '', str_replace( array('<?php', '<?'), '', preg_replace_callback( "/\?>((.|\n)*?)<\?/","eval_mixed_helper",$string) ) );
-	return eval($string);
-}
-
-// output to browser
-eval_mixed($string);
-
-// output to variable
-ob_start();
-eval_mixed($string);
-$final_html = ob_get_clean();
-
-*/
+/* internal data */
+define(ESITE_VERSION, "0.2.0");
+define(ESITE_COPYRIGHT_DATES, "2005, 2006");
+define(ESITE_COPYRIGHT_HOLDERS, "Randall Wood");
 
 /* block short php tags to prevent conflicts later */
 ini_set('short_open_tag', 0);
@@ -52,295 +34,148 @@ ini_set('short_open_tag', 0);
 /* this path should be ${prefix}/lib/esite when the parser is at ${prefix}/bin/esite */
 set_include_path(get_include_path() . ':/usr/local/lib/esite');
 
-/* critical default settings */
-$esite_ini['global']['library'] = '/usr/local/lib/esite';
+class eSite_Parser {
 
-/* useful default settings */
-$esite_ini['site']['source'] = ".";
-$esite_ini['site']['build'] = $esite_ini['site']['source'] . "/build";
-$esite_ini['site']['intermediate'] = $esite_ini['site']['build'] . "/intermediate";
-$esite_ini['site']['templates'] = $esite_ini['site']['source'] . "/lib";
-$esite_ini['site']['exclude'] = "build;lib";
-$esite_ini['site']['default_template'] = "default.esite";
-$esite_ini['site']['scripts'] = $esite_ini['site']['source'] . "/lib";
-$esite_ini['files']['parse'] = "html;php";
-$esite_ini['files']['copy'] = "*";
-$esite_ini['files']['ignore'] = "esite;tidy.log";
-$esite_ini['files']['backup'] = "~";
-/* debugging can be controlled from the configuration files */
-$esite_ini['debug']['list_parsed_files'] = 0;
-$esite_ini['debug']['list_copied_files'] = 0;
-$esite_ini['debug']['keep_intermediate_files'] = 0;
-$esite_ini['debug']['list_ini_settings'] = 0;
-$esite_ini['debug']['print_debugging_statement'] = 0;
-$esite_ini['debug']['print_exec_command'] = 0;
+	var $settings;
 
-/* internal data */
-define(ESITE_VERSION, "0.1.0");
-define(ESITE_COPYRIGHT_DATES, "2005");
-define(ESITE_COPYRIGHT_HOLDERS, "Randall Wood");
+	function eSite_Parser() {
+		// critical default settings //
+		$this->settings['global']['library'] = '/usr/local/lib/esite';
 
-function esite_internal_main($args) {
-	global $esite_ini;
-	esite_internal_initialize();
-	esite_internal_include_library();
-	// toggle off getopts warning on Mac OS X
-	$error_level = error_reporting(1);
-	$esite_options = getopt("bce:hilp:s:tv", array('build', 'clean', 'exec:', 'help', 'info', 'links', 'parse:', 'script:', 'tidy', 'version'));
-	// return error reporting to original state
-	error_reporting($error_level);
-	if (!$esite_options) {
-			$esite_options = array('build' => 0);
-	}
-	foreach (array_keys($esite_options) as $option) {
-		switch ($option) {
-		case 'b';
-		case 'build':
-			esite_internal_prepare();
-			esite_internal_preprocess_templates($esite_ini['site']['templates'], "");
-			esite_internal_build($esite_ini['site']['source'], "");
-			esite_internal_cleanup();
-			break;
-		case 'c':
-		case 'clean':
-			esite_internal_cleanup();
-			break;
-		case 'e':
-		case 'exec':
-			esite_internal_prepare();
-			esite_exec($esite_options[$option], $args, '');
-			break;
-		case 'h':
-		case 'help':
-			esite_internal_help();
-			break(2);
-		case 'i':
-		case 'info':
-			phpinfo();
-			break(2);
-		case 'l':
-		case 'links':
-			esite_internal_prepare();
-			break;
-		case 'p':
-		case 'parse':
-			esite_internal_prepare();
-			esite_internal_parse($esite_options[$option], 0);
-			break;
-		case 's':
-		case 'script':
-			esite_internal_prepare();
-			esite_exec($esite_options[$option], $args, $esite_ini['site']['scripts']);
-			break;
-		case 't':
-		case 'tidy':
-			esite_internal_prepare();
-			esite_internal_tidy($esite_ini['site']['build'], "");
-			break;
-		case 'v':
-		case 'version':
-			esite_internal_version();
-			break(2);
-		}
-	}
-	/*
-	switch ($args[1]) {
-	case 'parse':
-		esite_internal_prepare();
-		esite_internal_parse($args[2], 0);
-		break;
-	case 'clean':
-		esite_internal_cleanup();
-		break;
-	case 'version':
-		esite_internal_version();
-		break;
-	case 'help':
-		esite_internal_help();
-		break;
-	case 'script':
-		esite_internal_prepare();
-		esite_exec($args[2], $args, $esite_ini['site']['scripts']);
-		break;
-	case 'exec':
-		esite_internal_prepare();
-		esite_exec($args[2], $args, '');
-		break;
-	case 'check':
-		esite_internal_prepare();
-		switch ($args[2]) {
-		case 'tidy':
-			esite_internal_tidy($esite_ini['site']['build'], "");
-			break;
-		case 'links':
-			break;
-		default:
-			esite_internal_tidy($esite_ini['site']['build'], "");
-			break;
-		}
-		break;
-	case '';
-	case 'build':
-		esite_internal_prepare();
-		esite_internal_preprocess_templates($esite_ini['site']['templates'], "");
-		esite_internal_build($esite_ini['site']['source'], "");
-		esite_internal_cleanup();
-		break;
-	default:
-		break;
-	}
-	*/
-}
+		// useful default settings //
+		$this->settings['site']['source'] = ".";
+		$this->settings['site']['build'] = $this->settings['site']['source'] . "/build";
+		$this->settings['site']['intermediate'] = $this->settings['site']['build'] . "/intermediate";
+		$this->settings['site']['templates'] = $this->settings['site']['source'] . "/lib";
+		$this->settings['site']['exclude'] = "build;lib";
+		$this->settings['site']['default_template'] = "default.esite";
+		$this->settings['site']['scripts'] = $this->settings['site']['source'] . "/lib";
+		$this->settings['files']['parse'] = "html;php";
+		$this->settings['files']['copy'] = "*";
+		$this->settings['files']['ignore'] = "esite;tidy.log";
+		$this->settings['files']['backup'] = "~";
+		// debugging can be controlled from the configuration files //
+		$this->settings['debug']['list_parsed_files'] = 0;
+		$this->settings['debug']['list_copied_files'] = 0;
+		$this->settings['debug']['keep_intermediate_files'] = 0;
+		$this->settings['debug']['list_ini_settings'] = 0;
+		$this->settings['debug']['print_debugging_statement'] = 0;
+		$this->settings['debug']['print_exec_command'] = 0;
 
-/*	function esite_internal_initialize(string $ini_file = '')
-	read the eSite preferences set from the *.ini files
-	this functionality has been seperated out from esite_internal_prepare so that it may be
-	used very early in the script execution
- */
-function esite_internal_initialize($ini_file = '') {
-	global $esite_ini;
-	if ($ini_file) {
-		if (file_exists($ini_file)) {
-			$esite_ini = esite_internal_ini_array_merge($esite_ini, parse_ini_file(realpath($ini_file), 1));
-			// not reliable if tested against a debug statement set
-			// in a .ini file
-			// echo ("initializing from $ini_file\n");
-		}
-	} else {
-		// defaults location
-		// package/port maintainers should set /usr/local to ${prefix}
-		esite_internal_initialize("/usr/local/etc/esite.ini");
-		// LINUX/UNIX standard system-wide location
-		esite_internal_initialize("/etc/esite.ini");
-		// Mac OS X standard system-wide location
-		esite_internal_initialize("/Library/Preferences/net.sourceforge.esite.ini");
-		// LINUX/UNIX standard per-user location
-		esite_internal_initialize("{$_ENV["HOME"]}/esite.ini");
-		// Mac OS X standard per-user location
-		esite_internal_initialize("{$_ENV["HOME"]}/Library/Preferences/net.sourceforge.esite.ini");
-		// current directory
-		esite_internal_initialize("./esite.ini");
-		if ($esite_ini['debug']['list_ini_settings']) {
-			var_dump($esite_ini);
-		}
+		$this->initialize();
+		$this->include_library();
 	}
-}
 
-/*	function esite_internal_include_library()
-	Include eSite library files that are critical for the parser to operate.
- */
-function esite_internal_include_library() {
-	global $esite_ini;
-	set_include_path(get_include_path() . ':' . $esite_ini['global']['library']);
-	// any required files would be included here. use require() to force an error
-//	require_once(esite/internal/parser.php);
-}
-
-/* function esite_internal_prepare()
-	Prepare for building or parsing
- */
-function esite_internal_prepare() {
-	global $esite_ini;
-	clearstatcache();
-	if ($esite_ini['site']['source'] == '.') { $esite_ini['site']['source'] = './'; }
-	if ($esite_ini['site']['build'] == '.') { $esite_ini['site']['build'] = './'; }
-	if ($esite_ini['site']['intermediate'] == '.') { $esite_ini['site']['intermediate'] = './'; }
-	if (!is_dir($esite_ini['site']['build'])) { mkdir($esite_ini['site']['build']); }
-	if (!is_dir($esite_ini['site']['intermediate'])) { mkdir($esite_ini['site']['intermediate']); }
-	if (!is_dir($esite_ini['site']['intermediate'] . '/esite-templates')) { mkdir($esite_ini['site']['intermediate'] . '/esite-templates'); }
-	set_include_path(get_include_path() . ':' . realpath($esite_ini['site']['intermediate'] . '/esite-templates'));
-	$esite_ini['site']['exclude'] = explode(";", $esite_ini['site']['exclude']);
-	// test that exclude_dirs has a ;
-	// if not, $esite_ini['site']['exclude'][] = $esite_ini['site']['exclude'];
-	// the following logic fails
-	//	foreach ($esite_ini['site']['exclude'] as $dir) {
-	//		if (!instr($esite_ini['site']['source'], $dir)) {
-	//			$esite_ini['site']['exclude'][] = "$esite_ini['site']['source']/$dir";
-	//		}
-	//	}
-	$esite_ini['files']['parse'] = explode(";", $esite_ini['files']['parse']);
-	$esite_ini['files']['copy'] = explode(";", $esite_ini['files']['copy']);
-	$esite_ini['files']['ignore'] = explode(";", $esite_ini['files']['ignore']);
-	$esite_ini['files']['backup'] = explode(";", $esite_ini['files']['backup']);
-	foreach ($esite_ini['files']['parse'] as $extension) {
-		foreach ($esite_ini['files']['backup'] as $backup) {
-			$esite_ini['files']['ignore'][] = $extension . $backup;
-		}
-	}
-	foreach ($esite_ini['files']['copy'] as $extension) {
-		foreach ($esite_ini['files']['backup'] as $backup) {
-			$esite_ini['files']['ignore'][] = $extension . $backup;
-		}
-	}
-	foreach ($esite_ini['files']['ignore'] as $extension) {
-		foreach ($esite_ini['files']['backup'] as $backup) {
-			$esite_ini['files']['ignore'][] = $extension . $backup;
-		}
-	}
-	foreach ($esite_ini['files']['backup'] as $extension) {
-		$esite_ini['files']['ignore'][] = $extension;
-	}
-}
-
-/* function esite_internal_cleanup()
-	Remove the intermediate directory once complete
- */
-function esite_internal_cleanup() {
-	global $esite_ini;
-	if (!$esite_ini['debug']['keep_intermediate_files']) {
-		esite_internal_rmdir($esite_ini['site']['intermediate']);
-	}
-}
-
-/*	function esite_internal_rmdir(string $dir)
-	Remove a directory and all its contents
- */
-function esite_internal_rmdir($dir) {
-	if($objs = glob($dir."/*")){
-		foreach($objs as $obj) {
-			is_dir($obj) ? esite_internal_rmdir($obj) : unlink($obj);
-		}
-	}
-	rmdir($dir);
-}
-
-/* function esite_internal_ini_array_merge(array $ini, array $new_ini)
-	Merge two ini arrays together, replacing values in
-	$ini with values from $new_ini
- */
-function esite_internal_ini_array_merge($ini, $new_ini) {
-	$keys = array_keys($ini);
-	foreach($keys as $section) {
-		$ini[$section] = array_merge($ini[$section], $new_ini[$section]);
-	}
-	return $ini;
-}
-
-/* function esite_internal_build(string $dir)
-	Build the website located in the source directory
-	Recurses for all subdirectories
- */
-function esite_internal_build($working_source) {
-	global $esite_ini;
-	$contents = glob($working_source . "/*");
-	foreach ($contents as $file) {
-		$info = pathinfo($file);
-		if (is_dir($file)) {
-			if (!in_array(basename($file), $esite_ini['site']['exclude'])) {
-				esite_internal_build($file, "");
+	/*	function initialize(string $ini_file = '')
+		read the eSite preferences set from the *.ini files
+		this functionality has been seperated out from eSite_Parser::prepare so that it may be
+		used very early in the script execution
+	 */
+	function initialize($ini_file = '') {
+		if ($ini_file) {
+			if (file_exists($ini_file)) {
+				$this->settings = eSite_Parser::ini_array_merge($this->settings, parse_ini_file(realpath($ini_file), 1));
+				// not reliable if tested against a debug statement set
+				// in a .ini file
+				// echo ("initializing from $ini_file\n");
 			}
 		} else {
-			if (!in_array($info['extension'], $esite_ini['files']['ignore'])) {
-				$dir = $esite_ini['site']['build'] . str_replace($esite_ini['site']['source'],"", $working_source);
-				if (!is_dir($dir)) {
-					if (version_compare(phpversion(), "5.0.0", ">=")) {
-						mkdir($dir, 0755, TRUE);
-					} else {
-						mkdir($dir, 0755);
-					}
+			// defaults location
+			// package/port maintainers should set /usr/local to ${prefix}
+			$this->initialize("/usr/local/etc/esite.ini");
+			// LINUX/UNIX standard system-wide location
+			$this->initialize("/etc/esite.ini");
+			// Mac OS X standard system-wide location
+			$this->initialize("/Library/Preferences/net.sourceforge.esite.ini");
+			// LINUX/UNIX standard per-user location
+			$this->initialize("{$_ENV["HOME"]}/esite.ini");
+			// Mac OS X standard per-user location
+			$this->initialize("{$_ENV["HOME"]}/Library/Preferences/net.sourceforge.esite.ini");
+			// current directory
+			$this->initialize("./esite.ini");
+			if ($this->settings['debug']['list_ini_settings']) {
+				var_dump($this->settings);
+			}
+		}
+	}
+
+	function main($args) {
+		// toggle off getopts warning on Mac OS X
+		$error_level = error_reporting(1);
+		$esite_options = getopt("bce:hilp:s:tv", array('build', 'clean', 'exec:', 'help', 'info', 'links', 'parse:', 'script:', 'tidy', 'version'));
+		// return error reporting to original state
+		error_reporting($error_level);
+		if (!$esite_options) {
+				$esite_options = array('build' => 0);
+		}
+		foreach (array_keys($esite_options) as $option) {
+			switch ($option) {
+			case 'b';
+			case 'build':
+				$this->prepare();
+				$this->preprocess_templates($this->settings['site']['templates'], "");
+				$this->build($this->settings['site']['source'], "");
+				$this->cleanup();
+				break;
+			case 'c':
+			case 'clean':
+				$this->cleanup();
+				break;
+			case 'e':
+			case 'exec':
+				$this->prepare();
+				esite_exec($esite_options[$option], $args, '');
+				break;
+			case 'h':
+			case 'help':
+				eSite_Parser::help();
+				break(2);
+			case 'i':
+			case 'info':
+				phpinfo();
+				break(2);
+			case 'l':
+			case 'links':
+				$this->prepare();
+				break;
+			case 'p':
+			case 'parse':
+				$this->prepare();
+				$this->parse($esite_options[$option], 0);
+				break;
+			case 's':
+			case 'script':
+				$this->prepare();
+				esite_exec($esite_options[$option], $args, $this->settings['site']['scripts']);
+				break;
+			case 't':
+			case 'tidy':
+				$this->prepare();
+				$this->tidy($this->settings['site']['build'], "");
+				break;
+			case 'v':
+			case 'version':
+				eSite_Parser::version();
+				break(2);
+			}
+		}
+	}
+
+	/* function build(string $dir)
+		Build the website located in the source directory
+		Recurses for all subdirectories
+	 */
+	function build($working_source) {
+		$contents = glob($working_source . "/*");
+		foreach ($contents as $file) {
+			$info = pathinfo($file);
+			if (is_dir($file)) {
+				if (!in_array(basename($file), $this->settings['site']['exclude'])) {
+					$this->build($file, "");
 				}
-				if (in_array($info['extension'], $esite_ini['files']['parse'])) {
-					$dir = $esite_ini['site']['intermediate'] . str_replace($esite_ini['site']['source'],"", $working_source);
+			} else {
+				if (!in_array($info['extension'], $this->settings['files']['ignore'])) {
+					$dir = $this->settings['site']['build'] . str_replace($this->settings['site']['source'],"", $working_source);
 					if (!is_dir($dir)) {
 						if (version_compare(phpversion(), "5.0.0", ">=")) {
 							mkdir($dir, 0755, TRUE);
@@ -348,202 +183,277 @@ function esite_internal_build($working_source) {
 							mkdir($dir, 0755);
 						}
 					}
-					esite_internal_parse($file, 0);
+					if (in_array($info['extension'], $this->settings['files']['parse'])) {
+						$dir = $this->settings['site']['intermediate'] . str_replace($this->settings['site']['source'],"", $working_source);
+						if (!is_dir($dir)) {
+							if (version_compare(phpversion(), "5.0.0", ">=")) {
+								mkdir($dir, 0755, TRUE);
+							} else {
+								mkdir($dir, 0755);
+							}
+						}
+						$this->parse($file, 0);
+					} else {
+						if ($this->settings['debug']['list_copied_files']) {
+							echo "$file (copied)\n";
+						}
+						copy($file, $this->settings['site']['build'] . '/' . $file);
+					}			
 				} else {
-					if ($esite_ini['debug']['list_copied_files']) {
-						echo "$file (copied)\n";
-					}
-					copy($file, $esite_ini['site']['build'] . '/' . $file);
-				}			
-			} else {
-				// ignore
+					// ignore
+				}
 			}
 		}
 	}
-}
 
-/* function esite_internal_tidy(string $dir)
-	Run html-tidy against the website, storing the results in the source dir at filename.tidy.log
- */
-function esite_internal_tidy($working_source) {
-	global $esite_ini;
-	$contents = glob($working_source . "/*");
-	foreach ($contents as $file) {
-		$file = str_replace("{$esite_ini['site']['build']}/", "", $file);
-		$info = pathinfo($file);
-		if (is_dir($file)) {
-			if (!in_array(basename($file), $esite_ini['site']['exclude'])) {
-				esite_internal_tidy($file, "");
-			}
-		} else {
-			if (!in_array($info['extension'], $esite_ini['files']['ignore'])) {
-				$dir = $esite_ini['site']['source'] . "/" . str_replace($esite_ini['site']['build'],"", $working_source);
-				if (!is_dir($dir)) {
-					mkdir($dir);
+	/* function tidy(string $dir)
+		Run html-tidy against the website, storing the results in the source dir at filename.tidy.log
+	 */
+	function tidy($working_source) {
+		$contents = glob($working_source . "/*");
+		foreach ($contents as $file) {
+			$file = str_replace($this->settings['site']['build'] . "/", "", $file);
+			$info = pathinfo($file);
+			if (is_dir($file)) {
+				if (!in_array(basename($file), $this->settings['site']['exclude'])) {
+					$this->tidy($file, "");
 				}
-				if (in_array($info['extension'], $esite_ini['files']['parse'])) {
-					$dir = $esite_ini['site']['source'] . "/" . str_replace($esite_ini['site']['build'],"", $working_source);
-					$file = str_replace("$working_source/", "", $file);
+			} else {
+				if (!in_array($info['extension'], $this->settings['files']['ignore'])) {
+					$dir = $this->settings['site']['source'] . "/" . str_replace($this->settings['site']['build'],"", $working_source);
 					if (!is_dir($dir)) {
 						mkdir($dir);
 					}
-					esite_exec("tidy", array("-f", "$dir/$file.tidy.log", "-e", "$working_source/$file"), '');
-				}			
-			}
-		}
-	}
-}
-
-/* function esite_internal_preprocess_templates(string $dir)
-	Preprocess all templates prior to building the website
- */
-function esite_internal_preprocess_templates($working_source, $working_name) {
-	global $esite_ini;
-	$contents = glob($working_source . "/*");
-	foreach ($contents as $file) {
-		if (is_dir("$file/")) {
-			if (!in_array(basename($file), $esite_ini['site']['exclude'])) {
-				esite_internal_preprocess_templates($file, "");
-			}
-		} else {
-			$extension = pathinfo($file);
-			$extension = $extension['extension'];
-			if ($extension == 'esite') {
-				$dir = $esite_ini['site']['intermediate'] . "/esite-templates/" . str_replace($esite_ini['site']['templates'],"", $working_source);
-				if (!is_dir($dir)) {
-					mkdir($dir);
+					if (in_array($info['extension'], $this->settings['files']['parse'])) {
+						$dir = $this->settings['site']['source'] . "/" . str_replace($this->settings['site']['build'],"", $working_source);
+						$file = str_replace("$working_source/", "", $file);
+						if (!is_dir($dir)) {
+							mkdir($dir);
+						}
+						esite_exec("tidy", array("-f", "$dir/$file.tidy.log", "-e", "$working_source/$file"), '');
+					}			
 				}
-				esite_internal_parse($file, 1);
 			}
 		}
 	}
-}
 
-/*	function esite_internal_parse(string $file)
-	Parse a source file, taking care to prep it for running
-	through a template first
- */
-/* TODO
-	* make the parser handle [ESITE] markers more intelligent
-	* add a valid [ESITE TEMPLATE template_name] marker
-	* add a valid [ESITE VAR name=value] marker
-	* make sure that [ESITE] markers accept \ escaped ]s
- */
-function esite_internal_parse($esite_file, $esite_is_template) {
-	global $esite_ini, $esite_include;
-	$esite_write_file_to_name = $esite_file;
-	if ($esite_ini['debug']['list_parsed_files']) {
-		echo ($esite_is_template) ? "$esite_file (parsed template)\n" : "$esite_file (parsed)\n";
-	}
-	$esite_data = file_get_contents("$esite_file");
-	$esite_data = preg_replace('/\[ESITE(\s+)TITLE(\s*)=(\s*)(.*?)(\s*)\]/i', '$esite_title = "\4";', $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)TITLE(\s*)(.+?)(\s*)\]/i', '$esite_title = "\3";', $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)ROOT(\s*)=(\s*)(.*?)(\s*)\]/i', '$esite_root = "\3";', $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)ROOT(\s*)(.+?)(\s*)\]/i', '$esite_root = "\3";', $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)ROOT(\s*)\]/i', "<?esite echo(\$esite_root); ?>", $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)BEGIN(\s*)\]/i', "\n\$esite_content = <<<END_OF_CONTENT\n", $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)END(\s*)\]/i', "\nEND_OF_CONTENT;\n", $esite_data);
-        $esite_data = preg_replace('/\[ESITE(\s+)BEGIN(\s*)(.+?)(\s*)\]/i', "\n\$\3 = <<<END_OF_CONTENT\n", $esite_data);
-        $esite_data = preg_replace('/\[ESITE(\s+)END(\s*)(.+?)(\s*)\]/i', "\nEND_OF_CONTENT;\n", $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)PARSE(\s+)CONTENT(\s*)\]/i', "<?esite esite_parse_content(\$esite_content); ?>", $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)PARSE(\s+)TITLE(\s*)\]/i', "<?esite echo(\$esite_title); ?>", $esite_data);
-        $esite_data = preg_replace('/\[ESITE(\s+)PARSE(\s+)(.+?)(\s*)\]/i', "<?esite esite_parse_content(\$\3); ?>", $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)TITLE(\s*)\]/i', "<?esite echo(\$esite_title); ?>", $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)CHANGE(\s+)NAME(\s+)TO(\s+)(.+?)(\s*)\]/i', '$esite_write_file_to_name = "\5"; ?>', $esite_data);
-	$esite_data = esite_internal_parse_variables($esite_data);
-	if (!$esite_is_template) {
-		if (substr(trim($esite_data), 0, 7) != "<?esite") {
-			$esite_data = "<?esite\n" . $esite_data . "\nrequire('" . $esite_ini['site']['intermediate'] . "/esite-templates/" . $esite_ini['site']['default_template'] . "');\n?>\n";
+	/*	function parse(string $file)
+		Parse a source file, taking care to prep it for running
+		through a template first
+	 */
+	/* TODO
+		* make the parser handle [ESITE] markers more intelligent
+		* add a valid [ESITE TEMPLATE template_name] marker
+		* add a valid [ESITE VAR name=value] marker
+		* make sure that [ESITE] markers accept \ escaped ]s
+	 */
+	function parse($esite_file, $esite_is_template) {
+		$esite_write_file_to_name = $esite_file;
+		if ($this->settings['debug']['list_parsed_files']) {
+			echo ($esite_is_template) ? "$esite_file (parsed template)\n" : "$esite_file (parsed)\n";
 		}
-	}
-	$esite_data = str_replace("<?esite", "<?php", str_replace("<?php", "<?esite-php", $esite_data));
-	$esite_data = str_replace("[--ESITE", "[ESITE", $esite_data);
-	$esite_handle = (!$esite_is_template) ?
-		fopen($esite_ini['site']['intermediate'] . "/" . str_replace($esite_ini['site']['source'], "", "$esite_file"), "w") :
-		fopen($esite_ini['site']['intermediate'] . "/esite-templates/" . str_replace($esite_ini['site']['templates'], "", "$esite_file"), "w");
-	fwrite($esite_handle, $esite_data);
-	fclose($esite_handle);
-	if (!$esite_is_template) {
-		$esite_root = str_repeat('../', (count(split('/', str_replace($esite_ini['site']['source'], "", $esite_file)))) - 2);
-		ob_start();
-		include($esite_ini['site']['intermediate'] . str_replace($esite_ini['site']['source'], "", $esite_file));
-		$esite_data = ob_get_contents();
-		ob_end_clean();
-		$esite_data = str_replace("<?esite-php", "<?php", $esite_data);
-		if ($esite_file != $esite_write_file_to_name) {
-			$esite_write_file_to_name = str_replace(basename($esite_file), $esite_write_file_to_name, $esite_file);
-			if($esite_ini['debug']['print_debugging_statement']) {
-				echo("File name change from $esite_file to $esite_write_file_to_name\n");
+		$esite_data = file_get_contents("$esite_file");
+		$esite_data = preg_replace('/\[ESITE(\s+)TITLE(\s*)=(\s*)(.*?)(\s*)\]/i', '$esite_title = "\4";', $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)TITLE(\s*)(.+?)(\s*)\]/i', '$esite_title = "\3";', $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)ROOT(\s*)=(\s*)(.*?)(\s*)\]/i', '$esite_root = "\3";', $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)ROOT(\s*)(.+?)(\s*)\]/i', '$esite_root = "\3";', $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)ROOT(\s*)\]/i', "<?esite echo(\$esite_root); ?>", $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)BEGIN(\s*)\]/i', "\n\$esite_content = <<<END_OF_CONTENT\n", $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)END(\s*)\]/i', "\nEND_OF_CONTENT;\n", $esite_data);
+	        $esite_data = preg_replace('/\[ESITE(\s+)BEGIN(\s*)(.+?)(\s*)\]/i', "\n\$\3 = <<<END_OF_CONTENT\n", $esite_data);
+	        $esite_data = preg_replace('/\[ESITE(\s+)END(\s*)(.+?)(\s*)\]/i', "\nEND_OF_CONTENT;\n", $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)PARSE(\s+)CONTENT(\s*)\]/i', "<?esite esite_parse_content(\$esite_content); ?>", $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)PARSE(\s+)TITLE(\s*)\]/i', "<?esite echo(\$esite_title); ?>", $esite_data);
+	        $esite_data = preg_replace('/\[ESITE(\s+)PARSE(\s+)(.+?)(\s*)\]/i', "<?esite esite_parse_content(\$\3); ?>", $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)TITLE(\s*)\]/i', "<?esite echo(\$esite_title); ?>", $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)CHANGE(\s+)NAME(\s+)TO(\s+)(.+?)(\s*)\]/i', '$esite_write_file_to_name = "\5"; ?>', $esite_data);
+		$esite_data = $this->parse_variables($esite_data);
+		if (!$esite_is_template) {
+			if (substr(trim($esite_data), 0, 7) != "<?esite") {
+				$esite_data = "<?esite\n" . $esite_data . "\nrequire('" . $this->settings['site']['intermediate'] . "/esite-templates/" . $this->settings['site']['default_template'] . "');\n?>\n";
 			}
 		}
-		$esite_handle = fopen($esite_ini['site']['build'] . str_replace($esite_ini['site']['source'], "", $esite_write_file_to_name), "w");
+		$esite_data = str_replace("<?esite", "<?php", str_replace("<?php", "<?esite-php", $esite_data));
+		$esite_data = str_replace("[--ESITE", "[ESITE", $esite_data);
+		$esite_handle = (!$esite_is_template) ?
+			fopen($this->settings['site']['intermediate'] . "/" . str_replace($this->settings['site']['source'], "", "$esite_file"), "w") :
+			fopen($this->settings['site']['intermediate'] . "/esite-templates/" . str_replace($this->settings['site']['templates'], "", "$esite_file"), "w");
 		fwrite($esite_handle, $esite_data);
 		fclose($esite_handle);
-		if (!$esite_ini['debug']['keep_intermediate_files']) {
-			unlink($esite_ini['site']['intermediate'] . str_replace($esite_ini['site']['source'], "", $esite_file));
+		if (!$esite_is_template) {
+			$esite_root = str_repeat('../', (count(split('/', str_replace($this->settings['site']['source'], "", $esite_file)))) - 2);
+			ob_start();
+			include($this->settings['site']['intermediate'] . str_replace($this->settings['site']['source'], "", $esite_file));
+			$esite_data = ob_get_contents();
+			ob_end_clean();
+			$esite_data = str_replace("<?esite-php", "<?php", $esite_data);
+			if ($esite_file != $esite_write_file_to_name) {
+				$esite_write_file_to_name = str_replace(basename($esite_file), $esite_write_file_to_name, $esite_file);
+				if($this->settings['debug']['print_debugging_statement']) {
+					echo("File name change from $esite_file to $esite_write_file_to_name\n");
+				}
+			}
+			$esite_handle = fopen($this->settings['site']['build'] . str_replace($this->settings['site']['source'], "", $esite_write_file_to_name), "w");
+			fwrite($esite_handle, $esite_data);
+			fclose($esite_handle);
+			if (!$this->settings['debug']['keep_intermediate_files']) {
+				unlink($this->settings['site']['intermediate'] . str_replace($this->settings['site']['source'], "", $esite_file));
+			}
 		}
 	}
-}
 
-/*	function string esite_internal_parse_variables(string $esite_data)
-	Parse $esite_data to replace [ESITE VARIABLE=DATA] into $esite_variable = data php code structures
- */
-function esite_internal_parse_variables($esite_data) {
-	$esite_data = preg_replace('/\[ESITE(\s+)(\w+)(\s*)=(\s*)(\d+)(\s*)\]/i', '$\2 = \5;', $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)(\w+)(\s*)=(\s*)(\w+)(\s*)\]/i', '$\2 = "\5";', $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)(\w+)(\s*)=(\s*)([\'\"])(.*?)(\5)(\s*)\]/i', '$\2 = \5\6\5;', $esite_data);
-	$esite_data = preg_replace('/\[ESITE(\s+)(\w+)(\s*)\]/i', '<?esite echo(\$\2); ?>', $esite_data);
-	return $esite_data;
-}
+	/*	function string parse_variables(string $esite_data)
+		Parse $esite_data to replace [ESITE VARIABLE=DATA] into $esite_variable = data php code structures
+	 */
+	function parse_variables($esite_data) {
+		$esite_data = preg_replace('/\[ESITE(\s+)(\w+)(\s*)=(\s*)(\d+)(\s*)\]/i', '$\2 = \5;', $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)(\w+)(\s*)=(\s*)(\w+)(\s*)\]/i', '$\2 = "\5";', $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)(\w+)(\s*)=(\s*)([\'\"])(.*?)(\5)(\s*)\]/i', '$\2 = \5\6\5;', $esite_data);
+		$esite_data = preg_replace('/\[ESITE(\s+)(\w+)(\s*)\]/i', '<?esite echo(\$\2); ?>', $esite_data);
+		return $esite_data;
+	}
 
-/* sample include into string instead of into file contents
-	to be used for internal parsing */
-/*
-<?esite
-$string = get_include_contents('somefile.php');
+	/* function preprocess_templates(string $dir)
+		Preprocess all templates prior to building the website
+	 */
+	function preprocess_templates($working_source, $working_name) {
+		$contents = glob($working_source . "/*");
+		foreach ($contents as $file) {
+			if (is_dir("$file/")) {
+				if (!in_array(basename($file), $this->settings['site']['exclude'])) {
+					$this->preprocess_templates($file, "");
+				}
+			} else {
+				$extension = pathinfo($file);
+				$extension = $extension['extension'];
+				if ($extension == 'esite') {
+					$dir = $this->settings['site']['intermediate'] . "/esite-templates/" . str_replace($this->settings['site']['templates'],"", $working_source);
+					if (!is_dir($dir)) {
+						mkdir($dir);
+					}
+					$this->parse($file, 1);
+				}
+			}
+		}
+	}
 
-function get_include_contents($filename) {
-    if (is_file($filename)) {
-        ob_start();
-        include $filename;
-        $contents = ob_get_contents();
-        ob_end_clean();
-        return $contents;
-    }
-    return false;
-}
+	/* function $esite_parser->prepare()
+		Prepare for building or parsing
+	 */
+	function prepare() {
+		clearstatcache();
+		if ($this->settings['site']['source'] == '.') { $this->settings['site']['source'] = './'; }
+		if ($this->settings['site']['build'] == '.') { $this->settings['site']['build'] = './'; }
+		if ($this->settings['site']['intermediate'] == '.') { $this->settings['site']['intermediate'] = './'; }
+		if (!is_dir($this->settings['site']['build'])) { mkdir($this->settings['site']['build']); }
+		if (!is_dir($this->settings['site']['intermediate'])) { mkdir($this->settings['site']['intermediate']); }
+		if (!is_dir($this->settings['site']['intermediate'] . '/esite-templates')) { mkdir($this->settings['site']['intermediate'] . '/esite-templates'); }
+		set_include_path(get_include_path() . ':' . realpath($this->settings['site']['intermediate'] . '/esite-templates'));
+		$this->settings['site']['exclude'] = explode(";", $this->settings['site']['exclude']);
+		// test that exclude_dirs has a ;
+		// if not, $this->settings['site']['exclude'][] = $this->settings['site']['exclude'];
+		// the following logic fails
+		//	foreach ($this->settings['site']['exclude'] as $dir) {
+		//		if (!instr($this->settings['site']['source'], $dir)) {
+		//			$this->settings['site']['exclude'][] = "$this->settings['site']['source']/$dir";
+		//		}
+		//	}
+		$this->settings['files']['parse'] = explode(";", $this->settings['files']['parse']);
+		$this->settings['files']['copy'] = explode(";", $this->settings['files']['copy']);
+		$this->settings['files']['ignore'] = explode(";", $this->settings['files']['ignore']);
+		$this->settings['files']['backup'] = explode(";", $this->settings['files']['backup']);
+		foreach ($this->settings['files']['parse'] as $extension) {
+			foreach ($this->settings['files']['backup'] as $backup) {
+				$this->settings['files']['ignore'][] = $extension . $backup;
+			}
+		}
+		foreach ($this->settings['files']['copy'] as $extension) {
+			foreach ($this->settings['files']['backup'] as $backup) {
+				$this->settings['files']['ignore'][] = $extension . $backup;
+			}
+		}
+		foreach ($this->settings['files']['ignore'] as $extension) {
+			foreach ($this->settings['files']['backup'] as $backup) {
+				$this->settings['files']['ignore'][] = $extension . $backup;
+			}
+		}
+		foreach ($this->settings['files']['backup'] as $extension) {
+			$this->settings['files']['ignore'][] = $extension;
+		}
+	}
 
-?>
-*/
+	/* function $esite_parser->cleanup()
+		Remove the intermediate directory once complete
+	 */
+	function cleanup() {
+		if (!$this->settings['debug']['keep_intermediate_files']) {
+			eSite_Parser::rmdir($this->settings['site']['intermediate']);
+		}
+	}
 
-/* function esite_internal_version()
-	display version and copyright
- */
-function esite_internal_version() {
-	echo "esite version " . ESITE_VERSION . ", ";
-	echo "Copyright (C) " . ESITE_COPYRIGHT_DATES . " by " . ESITE_COPYRIGHT_HOLDERS . ".\n";
-	echo "esite comes with ABSOLUTELY NO WARRANTY.\n";
-	echo "This is free software, and you are welcome to redistribute it under certain\nconditions.\n";
-}
+	/* function ini_array_merge(array $ini, array $new_ini)
+		Merge two ini arrays together, replacing values in
+		$ini with values from $new_ini
+	 */
+	function ini_array_merge($ini, $new_ini) {
+		$keys = array_keys($ini);
+		foreach($keys as $section) {
+			$ini[$section] = array_merge($ini[$section], $new_ini[$section]);
+		}
+		return $ini;
+	}
 
-/* function esite_internal_help()
-	display user help text
- */
-function esite_internal_help() {
-	$text = <<<EOC
-esite [build|clean|parse|version|help] [file]
-esite [exec|script] [...]
-esite [check] [links|tidy]
-build   build a website
-check	run the site against tidy or a links checker
-clean   cleanup after the build process
-exec    run a program from within esite
-script  run a helper process with supplied parameters
-parse   parse a file
-version display version and copyright
-help    display this information
+	/*	function include_library()
+		Include eSite library files that are critical for the parser to operate.
+	 */
+	function include_library() {
+		set_include_path(get_include_path() . ':' . $this->settings['global']['library']);
+		// any required files would be included here. use require() to force an error
+	//	require_once(esite/internal/parser.php);
+	}
+
+	/*	function rmdir(string $dir)
+		Remove a directory and all its contents
+	 */
+	function rmdir($dir) {
+		if($objs = glob($dir."/*")){
+			foreach($objs as $obj) {
+				is_dir($obj) ? eSite_Parser::rmdir($obj) : unlink($obj);
+			}
+		}
+		rmdir($dir);
+	}
+
+	/* function help()
+		display user help text
+	 */
+	function help() {
+		$text = <<<EOC
+	esite [build|clean|parse|version|help] [file]
+	esite [exec|script] [...]
+	esite [check] [links|tidy]
+	build   build a website
+	check	run the site against tidy or a links checker
+	clean   cleanup after the build process
+	exec    run a program from within esite
+	script  run a helper process with supplied parameters
+	parse   parse a file
+	version display version and copyright
+	help    display this information
 EOC;
-	echo "$text\n";
+		echo "$text\n";
+	}
+
+	/* function version()
+		display version and copyright
+	 */
+	function version() {
+		echo "esite version " . ESITE_VERSION . ", ";
+		echo "Copyright (C) " . ESITE_COPYRIGHT_DATES . " by " . ESITE_COPYRIGHT_HOLDERS . ".\n";
+		echo "esite comes with ABSOLUTELY NO WARRANTY.\n";
+		echo "This is free software, and you are welcome to redistribute it under certain\nconditions.\n";
+	}
+
 }
 
 /*
@@ -554,19 +464,19 @@ EOC;
 	execute $path/$program (or $program if $path == '') with $parameters
  */
 function esite_exec($program, $parameters, $path = '') {
-	global $esite_ini;
+	global $esite_parser;
 	if ($program == $parameters[2]) {
 		array_shift($parameters);
 		array_shift($parameters);
 	}
 	$parameters = implode(" ", $parameters);
 	if ($path) {
-		if ($esite_ini['debug']['print_exec_command']) {
+		if ($esite_parser->settings['debug']['print_exec_command']) {
 			echo("$path/$program $parameters\n");
 		}
 		exec("$path/$program $parameters");
 	} else {
-		if ($esite_ini['debug']['print_exec_command']) {
+		if ($esite_parser->settings['debug']['print_exec_command']) {
 			echo("$program $parameters\n");
 		}
 		exec("$program $parameters");
@@ -591,9 +501,19 @@ function esite_parse_content($esite_content) {
 	"print_debugging_statement"
  */
 function esite_debug($flag = "print_debugging_statement") {
-	return $esite_ini['debug']['print_debugging_statement'];
+	global $esite_parser;
+	return $esite_parser->settings['debug'][$flag];
 }
- 
-esite_internal_main($argv);
+
+/*	function esite_setting(string $section, string $setting)
+	return the value of a setting
+ */
+function esite_setting($section, $setting) {
+	global $esite_parser;
+	return $esite_parser->settings[$section][$setting];
+}
+
+$esite_parser = new eSite_Parser($argv);
+$esite_parser->main($argv);
 
 ?>
